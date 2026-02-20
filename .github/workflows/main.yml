@@ -1,7 +1,7 @@
 name: Auto Sign
 on:
   schedule:
-    - cron: '0 0 * * *'  # 每天 UTC 0点（北京时间8点）执行，可按需要调整
+    - cron: '1 17 * * *'  # 北京时间每天凌晨1点01分执行
   workflow_dispatch:  # 允许手动触发运行
 
 jobs:
@@ -27,4 +27,4 @@ jobs:
           SC3_SENDKEY: ${{ secrets.SC3_SENDKEY }}
           SC3_UID: ${{ secrets.SC3_UID }}
           EXIT_WHEN_FAIL: on
-        run: python main.py
+        run: python src/main.py  # 这里改成了 src/main.py
