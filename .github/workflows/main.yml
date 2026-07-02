@@ -1,8 +1,11 @@
 name: Auto Sign
 on:
   schedule:
-    - cron: '1 17 * * *' # 北京时间每天凌晨1点01分执行
+    - cron: '1 17 * * *' # 北京时间每天凌晨 1:01（对应 UTC 17:01）
   workflow_dispatch: # 允许手动触发运行
+
+permissions:
+  contents: write    # 让 GITHUB_TOKEN 有权 push 空 commit
 
 jobs:
   sign-job:
@@ -10,15 +13,18 @@ jobs:
     steps:
       - name: 拉取仓库代码
         uses: actions/checkout@v5 # 从 v4 升级到 v5（支持 Node.js 24）
+
       - name: 设置 Python 环境
         uses: actions/setup-python@v6 # 从 v5 升级到 v6（支持 Node.js 24）
         with:
           python-version: '3.11'
           cache: 'pip'
+
       - name: 安装依赖
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
+
       - name: 执行签到
         env:
           TOKEN: ${{ secrets.TOKEN }}
@@ -26,3 +32,11 @@ jobs:
           SC3_UID: ${{ secrets.SC3_UID }}
           EXIT_WHEN_FAIL: on
         run: python src/main.py # 这里改成了 src/main.py
+
+      - name: keepalive - 推空 commit 防 60 天自动停
+        if: always()        # 签到失败也照样推
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git commit --allow-empty -m "chore(keepalive): ${GITHUB_SHA::7} @ $(date -u +%FT%TZ)"
+          git push
