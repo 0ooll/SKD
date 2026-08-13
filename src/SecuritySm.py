@@ -3,6 +3,7 @@ import gzip
 import hashlib
 # 数美加密方法类
 import json
+import logging
 import time
 import uuid
 
@@ -300,15 +301,26 @@ def get_d_id():
 
     des_result = _AES(GZIP(_DES(des_target)), priId.encode('utf-8'))
 
-    response = requests.post(devices_info_url, json={
-        'appId': 'default',
-        'compress': 2,
-        'data': des_result,
-        'encode': 5,
-        'ep': ep,
-        'organization': SM_CONFIG['organization'],
-        'os': 'web'  # 固定值
-    }, timeout=(10, 15))
+    last_error = None
+    for attempt in range(1, 4):
+        try:
+            response = requests.post(devices_info_url, json={
+                'appId': 'default',
+                'compress': 2,
+                'data': des_result,
+                'encode': 5,
+                'ep': ep,
+                'organization': SM_CONFIG['organization'],
+                'os': 'web'  # 固定值
+            }, timeout=(10, 30))
+            break
+        except (requests.exceptions.Timeout, requests.exceptions.ConnectionError) as exc:
+            last_error = exc
+            logging.warning(f'获取 dId 第 {attempt} 次失败: {exc}')
+            if attempt < 3:
+                time.sleep(2)
+    else:
+        raise last_error
 
     resp = response.json()
     if resp['code'] != 1100:
