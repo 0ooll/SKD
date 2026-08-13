@@ -32,32 +32,38 @@ def push_serverchan3(all_logs: list[str]):
     sendkey = os.environ.get('SC3_SENDKEY', '').strip()
     if not sendkey:
         return
-    uid = os.environ.get('SC3_UID', '').strip() or None
     title = f'森空岛自动签到结果 - {date.today().strftime("%Y-%m-%d")}'
 
     desp = _format_serverchan_desp(all_logs)
 
-    if uid is None:
-        m = re.match(r"^sctp(\d+)t", sendkey)
-        if not m:
-            logging.error("cannot extract uid from sendkey; please pass uid explicitly")
-            return
-        uid = m.group(1)
-
-    api = f"https://{uid}.push.ft07.com/send/{sendkey}.send"
     payload = {
         "title": title or "通知",
         "desp": desp or "",
     }
+
+    if sendkey.startswith("SCT"):
+        # Server酱³ Turbo：SCT + uid + T + 随机串，接口不需要单独传 uid
+        api = f"https://sctapi.ftqq.com/{sendkey}.send"
+        request_kwargs = {"data": payload}
+    else:
+        m = re.match(r"^sctp(\d+)t", sendkey)
+        if not m:
+            logging.error("cannot extract uid from sendkey; please pass uid explicitly")
+            return
+        uid = os.environ.get('SC3_UID', '').strip() or m.group(1)
+        api = f"https://{uid}.push.ft07.com/send/{sendkey}.send"
+        request_kwargs = {"json": payload}
     # if tags:
     #     payload["tags"] = tags
     # if short:
     #     payload["short"] = short
 
     try:
-        r = requests.post(api, json=payload)
+        r = requests.post(api, **request_kwargs)
         ok = (r.status_code == 200)
-        if not ok:
+        if ok:
+            logging.info("Server酱3 推送成功")
+        else:
             logging.error(f"serverchan推送失败,http代码{r.status_code},{r.text}")
     except Exception as e:
         logging.error("serverchan推送失败", exc_info=e)
