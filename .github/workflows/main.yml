@@ -10,6 +10,7 @@ permissions:
 jobs:
   sign-job:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - name: 拉取仓库代码
         uses: actions/checkout@v5 # 从 v4 升级到 v5（支持 Node.js 24）

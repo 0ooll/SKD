@@ -26,22 +26,35 @@ header = {
     'Connection': 'close',
     'X-Requested-With': 'com.hypergryph.skland'
 }
-header_login = {
-    'User-Agent': 'Mozilla/5.0 (Linux; Android 12; SM-A5560 Build/V417IR; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/101.0.4951.61 Safari/537.36; SKLand/1.52.1',
-    'Accept-Encoding': 'gzip',
-    'Connection': 'close',
-    'dId': get_d_id(),
-    'X-Requested-With': 'com.hypergryph.skland'
-}
+_device_id = None
+
+
+def get_device_id():
+    global _device_id
+    if _device_id is None:
+        _device_id = get_d_id()
+    return _device_id
+
+
+def get_header_login():
+    return {
+        'User-Agent': 'Mozilla/5.0 (Linux; Android 12; SM-A5560 Build/V417IR; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/101.0.4951.61 Safari/537.36; SKLand/1.52.1',
+        'Accept-Encoding': 'gzip',
+        'Connection': 'close',
+        'dId': get_device_id(),
+        'X-Requested-With': 'com.hypergryph.skland'
+    }
+
 
 # 签名请求头一定要这个顺序，否则失败
 # timestamp是必填的,其它三个随便填,不要为none即可
-header_for_sign = {
-    'platform': '3',
-    'timestamp': '',
-    'dId': header_login['dId'],
-    'vName': '1.0.0'
-}
+def get_header_for_sign():
+    return {
+        'platform': '3',
+        'timestamp': '',
+        'dId': get_device_id(),
+        'vName': '1.0.0'
+    }
 
 # 签到url
 sign_url_mapping = {
@@ -78,7 +91,7 @@ def generate_signature(path, body_or_query):
     # 总是说请勿修改设备时间，怕不是yj你的服务器有问题吧，所以这里特地-2
     t = str(int(time.time()) - 2)
     token = http_local.token.encode('utf-8')
-    header_ca = json.loads(json.dumps(header_for_sign))
+    header_ca = get_header_for_sign()
     header_ca['timestamp'] = t
     header_ca_str = json.dumps(header_ca, separators=(',', ':'))
     s = path + body_or_query + t + header_ca_str
@@ -101,11 +114,11 @@ def get_sign_header(url: str, method, body, h):
 
 def login_by_code():
     phone = input('请输入手机号码：')
-    resp = requests.post(login_code_url, json={'phone': phone, 'type': 2}, headers=header_login).json()
+    resp = requests.post(login_code_url, json={'phone': phone, 'type': 2}, headers=get_header_login()).json()
     if resp.get("status") != 0:
         raise Exception(f"发送手机验证码出现错误：{resp['msg']}")
     code = input("请输入手机验证码：")
-    r = requests.post(token_phone_code_url, json={"phone": phone, "code": code}, headers=header_login).json()
+    r = requests.post(token_phone_code_url, json={"phone": phone, "code": code}, headers=get_header_login()).json()
     return get_token(r)
 
 
@@ -126,7 +139,7 @@ def parse_user_token(t):
 def login_by_password():
     phone = input('请输入手机号码：')
     password = getpass('请输入密码(不会显示在屏幕上面)：')
-    r = requests.post(token_password_url, json={"phone": phone, "password": password}, headers=header_login).json()
+    r = requests.post(token_password_url, json={"phone": phone, "password": password}, headers=get_header_login()).json()
     return get_token(r)
 
 
@@ -146,7 +159,7 @@ def get_grant_code(token):
         'appCode': app_code,
         'token': token,
         'type': 0
-    }, headers=header_login)
+    }, headers=get_header_login())
     resp = response.json()
     if response.status_code != 200:
         raise Exception(f'获得认证代码失败：{resp}')
@@ -159,7 +172,7 @@ def get_cred(grant):
     resp = requests.post(cred_code_url, json={
         'code': grant,
         'kind': 1
-    }, headers=header_login).json()
+    }, headers=get_header_login()).json()
     if resp['code'] != 0:
         raise Exception(f'获得cred失败：{resp["message"]}')
     return resp['data']

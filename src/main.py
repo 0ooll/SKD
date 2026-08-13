@@ -50,6 +50,7 @@ def config_logger():
     _post = requests.post
 
     def get(*args, **kwargs):
+        kwargs.setdefault('timeout', (10, 15))
         if use_proxy:
             kwargs.update({
                 'proxies': {
@@ -62,6 +63,7 @@ def config_logger():
         return response
 
     def post(*args, **kwargs):
+        kwargs.setdefault('timeout', (10, 15))
         if use_proxy:
             kwargs.update({
                 'proxies': {
